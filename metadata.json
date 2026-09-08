@@ -1,0 +1,6 @@
+{
+  "name": "Especificação & Sistema de Abastecimento da Produção",
+  "description": "Especificação técnica, arquitetura funcional e protótipo interativo em tempo real para controle do fluxo de materiais do estoque às linhas de produção.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
