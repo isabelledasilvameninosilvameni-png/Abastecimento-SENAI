@@ -49,6 +49,36 @@ export interface Material {
   lotePadrao?: string;
 }
 
+export type StockMovementType = 
+  | 'ENTRADA_COMPRA' 
+  | 'ENTRADA_DEVOLUCAO' 
+  | 'ENTRADA_AVULSA'
+  | 'SAIDA_AVARIA' 
+  | 'SAIDA_DESCARTE' 
+  | 'SAIDA_MANUAL' 
+  | 'AJUSTE_INVENTARIO';
+
+export interface StockMovement {
+  id: string;
+  materialId: string;
+  materialCodigo: string;
+  materialDescricao: string;
+  tipo: StockMovementType;
+  tipoLabel: string;
+  natureza: 'ENTRADA' | 'SAIDA' | 'AJUSTE';
+  quantidade: number;
+  saldoAnterior: number;
+  saldoNovo: number;
+  unidadeMedida: string;
+  lote?: string;
+  documentoRef?: string;
+  motivo: string;
+  responsavelNome: string;
+  responsavelId: string;
+  responsavelPerfil: UserRole;
+  dataHora: string;
+}
+
 export interface WorkStation {
   id: string;
   codigo: string;       // Ex: 'P-01', 'P-02'

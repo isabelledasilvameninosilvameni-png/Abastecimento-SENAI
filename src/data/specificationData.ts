@@ -223,6 +223,13 @@ export const SPECIFICATION_MODULES: SpecificationModule[] = [
         acaoUsuario: "N/A",
         respostaSistema: "Altera status da ordem para 'MATERIAL_SEPARADO', debita saldo provisório e disponibiliza para a fila dos Abastecedores.",
         validacoes: ["Atualização atômica de estoque"]
+      },
+      {
+        passo: 4,
+        ator: "Estoquista / Gestor / Admin",
+        acaoUsuario: "Clica em 'Lançar Estoque Manual', seleciona Material, Natureza (Entrada +, Saída - ou Ajuste =), quantidade, lote, NF/doc e motivo detalhado.",
+        respostaSistema: "Calcula prévia em tempo real, valida saldo não-negativo, atualiza saldo do material, grava no Kardex de movimentações e gera log de auditoria.",
+        validacoes: ["Material válido", "Quantidade positiva", "Saldo suficiente para saída", "Motivo/justificativa obrigatório"]
       }
     ],
     informacoesExibidas: [
@@ -257,7 +264,8 @@ export const SPECIFICATION_MODULES: SpecificationModule[] = [
     ],
     regrasNegocio: [
       { codigo: "RN-EST-01", titulo: "Prevenção de Furo de Estoque", regra: "Não é permitido separar quantidade superior ao saldo físico disponível. Se faltar saldo, aciona botão 'Informar Problema'.", tratativaExcecao: "Ordem é colocada em 'COM_PROBLEMA' e compras/gestão é notificada." },
-      { codigo: "RN-EST-02", titulo: "Validação Obrigatória de Lote (FIFO/FEFO)", regra: "O sistema obriga a leitura do lote mais antigo em estoque (FIFO). Lotes divergentes exigem justificativa do gestor.", tratativaExcecao: "Bloqueio de tela exigindo PIN de liberação do Gestor." }
+      { codigo: "RN-EST-02", titulo: "Validação Obrigatória de Lote (FIFO/FEFO)", regra: "O sistema obriga a leitura do lote mais antigo em estoque (FIFO). Lotes divergentes exigem justificativa do gestor.", tratativaExcecao: "Bloqueio de tela exigindo PIN de liberação do Gestor." },
+      { codigo: "RN-EST-03", titulo: "Rastreabilidade de Lançamentos Manuais de Estoque", regra: "Todo lançamento manual (entrada, saída por avaria/descarte ou ajuste de inventário) exige identificação do operador, tipo de operação, motivo documentado e gera registro imutável no Extrato Kardex e Trilha de Auditoria.", tratativaExcecao: "Bloqueio do formulário se o campo de justificativa estiver vazio ou se saída exceder saldo atual." }
     ]
   },
   {
@@ -720,6 +728,16 @@ export const SYSTEM_ACTIONS_CATALOG: ActionDefinition[] = [
     comportamentoEsperado: "Ativa a câmera frontal/traseira ou aguarda leitura do feixe de laser do leitor dedicado.",
     requisitosPreAcao: ["Permissão de câmera concedida ou leitor USB/Bluetooth pareado"],
     retornoSistema: "Decodifica código, valida contra a etapa atual, executa ação associada e emite som de sucesso."
+  },
+  {
+    nome: "Lançar estoque manual",
+    icone: "PackagePlus",
+    cor: "bg-blue-600 hover:bg-blue-700 text-white",
+    ondeAparece: ["Gestão de Estoque & WMS", "Extrato de Kardex", "Card individual do Material"],
+    perfisAutorizados: ["ESTOQUISTA", "GESTOR", "ADMIN"],
+    comportamentoEsperado: "Registra formalmente entrada, saída avulsa por avaria/descarte ou ajuste de balanço físico.",
+    requisitosPreAcao: ["Material selecionado", "Quantidade válida", "Justificativa/motivo preenchido"],
+    retornoSistema: "Atualiza o saldo atual em tempo real, gera linha no Kardex, cria registro de auditoria e emite alerta caso atinja nível crítico."
   }
 ];
 
@@ -779,6 +797,24 @@ export const TECHNICAL_DATA_DICTIONARY = [
       { nome: "acao", tipo: "VARCHAR(50)", chave: "-", nulo: false, descricao: "Nome da ação (ACEITAR, INICIAR, CONFIRMAR)" },
       { nome: "timestamp", tipo: "TIMESTAMPTZ", chave: "INDEX", nulo: false, descricao: "Carimbo de data/hora do servidor NTP" },
       { nome: "detalhes_json", tipo: "JSONB", chave: "-", nulo: true, descricao: "Payload com lote, ip, dispositivo e observações" }
+    ]
+  },
+  {
+    tabela: "kardex_movimentacoes_estoque",
+    descricao: "Extrato contínuo de lançamentos manuais e automáticos de estoque (entradas, saídas, avarias e ajustes)",
+    campos: [
+      { nome: "id", tipo: "UUID", chave: "PK", nulo: false, descricao: "Identificador único do lançamento" },
+      { nome: "material_id", tipo: "UUID", chave: "FK", nulo: false, descricao: "Material movimentado" },
+      { nome: "tipo", tipo: "VARCHAR(50)", chave: "-", nulo: false, descricao: "ENTRADA_COMPRA, ENTRADA_DEVOLUCAO, SAIDA_AVARIA, SAIDA_DESCARTE, AJUSTE_INVENTARIO" },
+      { nome: "natureza", tipo: "ENUM", chave: "INDEX", nulo: false, descricao: "'ENTRADA', 'SAIDA', 'AJUSTE'" },
+      { nome: "quantidade", tipo: "DECIMAL(12,2)", chave: "-", nulo: false, descricao: "Volume movimentado" },
+      { nome: "saldo_anterior", tipo: "DECIMAL(12,2)", chave: "-", nulo: false, descricao: "Saldo antes da transação" },
+      { nome: "saldo_novo", tipo: "DECIMAL(12,2)", chave: "-", nulo: false, descricao: "Saldo resultante após a operação" },
+      { nome: "lote", tipo: "VARCHAR(50)", chave: "-", nulo: true, descricao: "Lote físico associado" },
+      { nome: "documento_ref", tipo: "VARCHAR(50)", chave: "-", nulo: true, descricao: "Nota Fiscal, OP ou RNC de referência" },
+      { nome: "motivo", tipo: "TEXT", chave: "-", nulo: false, descricao: "Justificativa auditável obrigatória" },
+      { nome: "responsavel_id", tipo: "UUID", chave: "FK", nulo: false, descricao: "Usuário que operou o lançamento" },
+      { nome: "data_hora", tipo: "TIMESTAMPTZ", chave: "-", nulo: false, descricao: "Data e hora do registro" }
     ]
   }
 ];

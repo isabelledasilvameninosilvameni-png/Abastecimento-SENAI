@@ -7,7 +7,9 @@ import {
   AuditLog, 
   SystemNotification, 
   RequestStatus, 
-  UserRole 
+  UserRole,
+  StockMovement,
+  StockMovementType
 } from './types';
 import { 
   INITIAL_REQUESTS, 
@@ -15,7 +17,8 @@ import {
   INITIAL_LINES, 
   INITIAL_USERS, 
   INITIAL_AUDIT_LOGS, 
-  INITIAL_NOTIFICATIONS 
+  INITIAL_NOTIFICATIONS,
+  INITIAL_STOCK_MOVEMENTS
 } from './data/initialData';
 
 // Subcomponents
@@ -62,6 +65,7 @@ export default function App() {
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [notifications, setNotifications] = useState<SystemNotification[]>(INITIAL_NOTIFICATIONS);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>(INITIAL_STOCK_MOVEMENTS);
 
   // Active User Profile Simulation (Defaults to Estoquista or Gestor)
   const [currentUserId, setCurrentUserId] = useState<string>('usr-03'); // Carlos Eduardo (Estoquista)
@@ -205,6 +209,81 @@ export default function App() {
       `Material ${newReq.materialDescricao} solicitado para ${newReq.postoNome} com urgência ${newReq.urgencia}.`,
       newReq.urgencia === 'CRITICO_LINHA_PARADA' ? 'URGENCIA' : 'STATUS',
       newReq.urgencia === 'CRITICO_LINHA_PARADA' ? 'ALTA' : 'MEDIA'
+    );
+  };
+
+  // Manual Stock Movement handler
+  const handleAddStockMovement = (movementData: {
+    materialId: string;
+    tipo: StockMovementType;
+    natureza: 'ENTRADA' | 'SAIDA' | 'AJUSTE';
+    tipoLabel: string;
+    quantidade: number;
+    saldoAnterior: number;
+    saldoNovo: number;
+    lote?: string;
+    documentoRef?: string;
+    motivo: string;
+  }) => {
+    const targetMaterial = materials.find(m => m.id === movementData.materialId);
+    if (!targetMaterial) return;
+
+    const timestamp = new Date().toLocaleString('pt-BR', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit', 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit' 
+    });
+
+    const newMovement: StockMovement = {
+      id: `mov-${Date.now()}`,
+      materialId: targetMaterial.id,
+      materialCodigo: targetMaterial.codigo,
+      materialDescricao: targetMaterial.descricao,
+      tipo: movementData.tipo,
+      tipoLabel: movementData.tipoLabel,
+      natureza: movementData.natureza,
+      quantidade: movementData.quantidade,
+      saldoAnterior: movementData.saldoAnterior,
+      saldoNovo: movementData.saldoNovo,
+      unidadeMedida: targetMaterial.unidadeMedida,
+      lote: movementData.lote || targetMaterial.lotePadrao,
+      documentoRef: movementData.documentoRef,
+      motivo: movementData.motivo,
+      responsavelNome: currentUser.name,
+      responsavelId: currentUser.id,
+      responsavelPerfil: currentUser.role,
+      dataHora: timestamp
+    };
+
+    // 1. Atualizar saldo do material
+    setMaterials(prev => prev.map(m => {
+      if (m.id !== movementData.materialId) return m;
+      return {
+        ...m,
+        saldoAtual: movementData.saldoNovo,
+        lotePadrao: movementData.lote ? movementData.lote : m.lotePadrao
+      };
+    }));
+
+    // 2. Registrar no histórico de movimentações
+    setStockMovements(prev => [newMovement, ...prev]);
+
+    // 3. Registrar na trilha de auditoria
+    logAction(
+      'LANCAMENTO_MANUAL_ESTOQUE',
+      targetMaterial.codigo,
+      `${movementData.tipoLabel}: ${movementData.natureza === 'ENTRADA' ? '+' : movementData.natureza === 'SAIDA' ? '-' : ''}${movementData.quantidade} ${targetMaterial.unidadeMedida}. Saldo: ${movementData.saldoAnterior} ➔ ${movementData.saldoNovo}. Motivo: ${movementData.motivo}`
+    );
+
+    // 4. Notificação
+    pushNotification(
+      `Estoque Atualizado Manualmente: ${targetMaterial.codigo}`,
+      `${movementData.tipoLabel} por ${currentUser.name}. Novo saldo: ${movementData.saldoNovo} ${targetMaterial.unidadeMedida}.`,
+      movementData.saldoNovo <= targetMaterial.estoqueMinimo ? 'FALTA_MATERIAL' : 'STATUS',
+      movementData.saldoNovo <= targetMaterial.estoqueMinimo ? 'ALTA' : 'MEDIA'
     );
   };
 
@@ -590,6 +669,8 @@ export default function App() {
         {activeTab === 'ESTOQUE' && (
           <StockManagementView
             materials={materials}
+            stockMovements={stockMovements}
+            currentUser={currentUser}
             onOpenScanner={() => {
               setRequestForScanner(null);
               setScannerContext('Leitura de Endereço de Prateleira ou Caixa');
@@ -599,6 +680,7 @@ export default function App() {
               setMaterials(prev => prev.map(m => m.id === updated.id ? updated : m));
               logAction('AJUSTAR_ESTOQUE', updated.codigo, `Saldo ajustado manualmente para ${updated.saldoAtual} ${updated.unidadeMedida}`);
             }}
+            onAddStockMovement={handleAddStockMovement}
           />
         )}
 

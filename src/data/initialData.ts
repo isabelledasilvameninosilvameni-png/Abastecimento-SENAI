@@ -1,4 +1,4 @@
-import { User, ProductionLine, Material, MaterialRequest, SystemNotification, AuditLog } from '../types';
+import { User, ProductionLine, Material, MaterialRequest, SystemNotification, AuditLog, StockMovement } from '../types';
 
 export const INITIAL_USERS: User[] = [
   {
@@ -468,3 +468,67 @@ export const INITIAL_AUDIT_LOGS: AuditLog[] = [
     ipOrigem: "192.168.20.4 (Quiosque Posto P-02)"
   }
 ];
+
+export const INITIAL_STOCK_MOVEMENTS: StockMovement[] = [
+  {
+    id: "mov-001",
+    materialId: "mat-01",
+    materialCodigo: "MAT-4029",
+    materialDescricao: "Parafuso Sextavado M8 x 45mm Aço 8.8 Galvanizado",
+    tipo: "ENTRADA_COMPRA",
+    tipoLabel: "Entrada por Compra / Recebimento",
+    natureza: "ENTRADA",
+    quantidade: 30,
+    saldoAnterior: 54,
+    saldoNovo: 84,
+    unidadeMedida: "CX (100un)",
+    lote: "LOT-2026-F88",
+    documentoRef: "NF-008921",
+    motivo: "Recebimento programado de fornecedor Metalúrgica Acier",
+    responsavelNome: "Carlos Santos",
+    responsavelId: "usr-03",
+    responsavelPerfil: "ESTOQUISTA",
+    dataHora: "2026-09-08 09:30:15"
+  },
+  {
+    id: "mov-002",
+    materialId: "mat-03",
+    materialCodigo: "MAT-7734",
+    materialDescricao: "Chicote Elétrico 12V com Conector Selado IP67",
+    tipo: "SAIDA_AVARIA",
+    tipoLabel: "Saída por Avaria / Danificado",
+    natureza: "SAIDA",
+    quantidade: 2,
+    saldoAnterior: 16,
+    saldoNovo: 14,
+    unidadeMedida: "UN",
+    lote: "LOT-2026-E44",
+    documentoRef: "RNC-104",
+    motivo: "Conector quebrado durante inspeção na doca de descarga",
+    responsavelNome: "Carlos Santos",
+    responsavelId: "usr-03",
+    responsavelPerfil: "ESTOQUISTA",
+    dataHora: "2026-09-08 10:15:40"
+  },
+  {
+    id: "mov-003",
+    materialId: "mat-04",
+    materialCodigo: "MAT-5512",
+    materialDescricao: "Sensor Indutivo de Proximidade M12 PNP NA",
+    tipo: "AJUSTE_INVENTARIO",
+    tipoLabel: "Ajuste de Balanço / Inventário",
+    natureza: "AJUSTE",
+    quantidade: 2,
+    saldoAnterior: 17,
+    saldoNovo: 19,
+    unidadeMedida: "UN",
+    lote: "LOT-2026-S02",
+    documentoRef: "INV-CICL-09",
+    motivo: "Contagem física cíclica na estante B-03 identificou 2 unidades a mais",
+    responsavelNome: "Fernanda Rocha",
+    responsavelId: "usr-02",
+    responsavelPerfil: "GESTOR",
+    dataHora: "2026-09-08 11:05:00"
+  }
+];
+
